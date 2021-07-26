@@ -13,12 +13,29 @@ contract CanineCartel is Ownable, ERC721 {
     uint256 public supplyLimit;
     bool public saleActive = false;
 
+    address public ownerAddress;
+    address public devAddress;
+
+    uint256 public devShare = 30;
+    uint256 public ownerShare = 70;
+
     constructor(
         uint256 tokenSupplyLimit,
         string memory tokenBaseUri
-    ) ERC721("CanineCartel", "MONSTER") {
+    ) ERC721("CanineCartel", "CC") {
         supplyLimit = tokenSupplyLimit;
         _setBaseURI(tokenBaseUri);
+
+        ownerAddress = owner();
+        devAddress = owner();
+    }
+
+    function setDevAddress(address _devAddress) external onlyOwner {
+        devAddress = _devAddress;
+    }
+
+    function setOwnerAddress(address _ownerAddress) external onlyOwner {
+        ownerAddress = _ownerAddress;
     }
 
     function toggleSaleActive() external onlyOwner {
@@ -43,6 +60,7 @@ contract CanineCartel is Ownable, ERC721 {
         require(msg.value >= mintPrice.mul(numberOfTokens), "Insufficient payment.");
 
         _mintCanines(numberOfTokens);
+        _withdraw();
     }
 
     function _mintCanines(uint numberOfTokens) private {
@@ -63,11 +81,12 @@ contract CanineCartel is Ownable, ERC721 {
         _setBaseURI(newBaseURI);
     }
 
-    function withdraw() external onlyOwner {
+    function _withdraw() internal {
         require(address(this).balance > 0, "No balance to withdraw.");
         
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        require(success, "Withdrawal failed.");
+        (bool ownerSuccess, ) = ownerAddress.call{value: address(this).balance.mul(ownerShare).div(100)}("");
+        (bool devSuccess, ) = devAddress.call{value: address(this).balance.mul(devShare).div(100)}("");
+        require(ownerSuccess && devSuccess, "Withdrawal failed.");
     }
 
     function tokensOwnedBy(address wallet) external view returns(uint256[] memory) {
