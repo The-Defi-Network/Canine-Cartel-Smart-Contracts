@@ -1,82 +1,83 @@
-// SPDX-License-Identifier: UNLICENSED
-// Created by The Defi Network LLC
-// Copyright 2021.
+// SPDX-License-Identifier: None
+pragma solidity ^0.7.6;
 
-pragma solidity ^0.8.4;
-
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-import './ICanineCartel.sol';
-
-contract CanineCartel is ICanineCartel, ERC721, Ownable {
+contract CanineCartel is Ownable, ERC721 {
     using SafeMath for uint256;
 
-    uint256 public override price = 0.08 ether;
-    uint256 public override totalSupply = 0;
+    uint256 public mintPrice = 80000000000000000;
+    uint256 public mintLimit = 20;
 
-    address payable public override ownerAddress;
-    address payable public override devAddress;
-    address payable public override marketingAddress;
-
-    uint256 private ownerPercent = 68;
-    uint256 private devPercent = 30;
-    uint256 private marketingPercent = 2;
+    uint256 public supplyLimit;
+    bool public saleActive = false;
 
     constructor(
-        address payable _ownerAddress, 
-        address payable _devAddress,
-        address payable _marketingAddress
-    ) ERC721("NFT", "Random NFT Sale") {
-        ownerAddress = _ownerAddress;
-        devAddress = _devAddress;
-        marketingAddress = _marketingAddress;
+        uint256 tokenSupplyLimit,
+        string memory tokenBaseUri
+    ) ERC721("CanineCartel", "MONSTER") {
+        supplyLimit = tokenSupplyLimit;
+        _setBaseURI(tokenBaseUri);
     }
 
-    receive() external payable {}
+    function toggleSaleActive() external onlyOwner {
+        saleActive = !saleActive;
+    }
 
-    function buy(uint256 _count) external payable override {
-        // Make sure only 10000 NFTs can exist
-        require(
-            totalSupply <= 10000,
-            "MFTSale::buy: All NFT's are minted"
-        );
-        // Make sure buyer is paying right price
-        require(
-            msg.value == price.mul(_count), 
-            "NFTSale::buy: Wrong amount of ETH sent "
-        );
+    function changeSupplyLimit(uint256 _supplyLimit) external onlyOwner {
+        supplyLimit = _supplyLimit;
+    }
 
-        for (uint256 i = 0; i < _count; i++) {
-            totalSupply = totalSupply.add(1);
-            _safeMint(msg.sender, totalSupply);
+    function changeMintLimit(uint256 _mintLimit) external onlyOwner {
+        mintLimit = _mintLimit;
+    }
+
+    function changeMintPrice(uint256 _mintPrice) external onlyOwner {
+        mintPrice = _mintPrice;
+    }
+
+    function buyCanines(uint numberOfTokens) external payable {
+        require(saleActive, "Sale is not active.");
+        require(numberOfTokens <= mintLimit, "Too many tokens for one transaction.");
+        require(msg.value >= mintPrice.mul(numberOfTokens), "Insufficient payment.");
+
+        _mintCanines(numberOfTokens);
+    }
+
+    function _mintCanines(uint numberOfTokens) private {
+        require(totalSupply().add(numberOfTokens) <= supplyLimit, "Not enough tokens left.");
+
+        uint256 newId = totalSupply();
+        for(uint i = 0; i < numberOfTokens; i++) {
+            newId += 1;
+            _safeMint(msg.sender, newId);
         }
-
-        uint256 ownerShare = price.mul(_count).mul(70).div(100);
-        uint256 devShare = price.mul(_count).mul(30).div(100);
-
-        ownerAddress.transfer(ownerShare);
-        devAddress.transfer(devShare);
     }
 
-    function setPrice(uint256 _price) external override onlyOwner {
-        price = _price;
+    function reserveCanines(uint256 numberOfTokens) external onlyOwner {
+        _mintCanines(numberOfTokens);
     }
 
-    function setOwnerAddress(address payable _ownerAddress) external override onlyOwner {
-        ownerAddress = _ownerAddress;
+    function setBaseURI(string memory newBaseURI) external onlyOwner {
+        _setBaseURI(newBaseURI);
     }
 
-    function setDevAddress(address payable _devAddress) external override onlyOwner {
-        devAddress = _devAddress;
+    function withdraw() external onlyOwner {
+        require(address(this).balance > 0, "No balance to withdraw.");
+        
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        require(success, "Withdrawal failed.");
     }
 
-    function setMarketingAddress(address payable _marketingAddress) external override onlyOwner {
-        marketingAddress = _marketingAddress;
-    }
+    function tokensOwnedBy(address wallet) external view returns(uint256[] memory) {
+      uint tokenCount = balanceOf(wallet);
 
-    function _baseURI() internal view virtual override returns (string memory) {
-        return "https://www.google.com/";
+      uint256[] memory ownedTokenIds = new uint256[](tokenCount);
+      for(uint i = 0; i < tokenCount; i++){
+        ownedTokenIds[i] = tokenOfOwnerByIndex(wallet, i);
+      }
+
+      return ownedTokenIds;
     }
 }
