@@ -5,10 +5,11 @@ require('dotenv').config();
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-solhint");
+require("@nomiclabs/hardhat-web3");
 
 const {
-   ETHERSCAN_API_KEY, INFURA_API_KEY, ALCHEMY_API_KEY, 
-   PRIVATE_KEY, PUBLIC_KEY 
+   INFURA_API_KEY,
+   MNEMONIC
 } = process.env;
 
 module.exports = {
@@ -16,6 +17,13 @@ module.exports = {
    defaultNetwork: "hardhat",
    networks: {
       hardhat: {},
+      rinkeby: {
+         url: INFURA_API_KEY,
+         accounts: {
+            mnemonic: MNEMONIC
+         },
+         chainId: 4
+      },
       // ropsten: {
       //    url: ALCHEMY_API_KEY,
       //    accounts: [`0x${PRIVATE_KEY}`]

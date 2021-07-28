@@ -1,12 +1,11 @@
 const hre = require("hardhat");
 
 async function main() {
-  const ownerAddress = "";
-  const devAddress = "";
-  const marketingAddress = "";
+  const tokenSupplyLimit = 100;
+  const tokenBaseUri = "";
   
   const CanineCartel = await hre.ethers.getContractFactory("CanineCartel");
-  const canineCartel = await CanineCartel.deploy(ownerAddress, devAddress, marketingAddress);
+  const canineCartel = await CanineCartel.deploy(tokenSupplyLimit, tokenBaseUri);
 
   await canineCartel.deployed();
 

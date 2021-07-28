@@ -19,6 +19,17 @@ contract CanineCartel is Ownable, ERC721 {
     uint256 public devShare = 30;
     uint256 public ownerShare = 70;
 
+    /********* Events - Start *********/
+    event DevAddressChanged(address _devAddress);
+    event OwnerChanged(address _ownerAddress);
+    event SaleStateChanged(bool _state);
+    event SupplyLimitChanged(uint256 _supplyLimit);
+    event MintLimitChanged(uint256 _mintLimit);
+    event MintPriceChanged(uint256 _mintPrice);
+    event CanineMinted(address indexed _user, uint256 _numberOfTokens);
+    event ReserveCanines(uint256 _numberOfTokens);
+    /********* Events - Ends *********/
+
     constructor(
         uint256 tokenSupplyLimit,
         string memory tokenBaseUri
@@ -32,49 +43,57 @@ contract CanineCartel is Ownable, ERC721 {
 
     function setDevAddress(address _devAddress) external onlyOwner {
         devAddress = _devAddress;
+        emit DevAddressChanged(_devAddress);
     }
 
     function setOwnerAddress(address _ownerAddress) external onlyOwner {
         ownerAddress = _ownerAddress;
+        emit OwnerChanged(_ownerAddress);
     }
 
     function toggleSaleActive() external onlyOwner {
         saleActive = !saleActive;
+        emit SaleStateChanged(saleActive);
     }
 
     function changeSupplyLimit(uint256 _supplyLimit) external onlyOwner {
         supplyLimit = _supplyLimit;
+        emit SupplyLimitChanged(_supplyLimit);
     }
 
     function changeMintLimit(uint256 _mintLimit) external onlyOwner {
         mintLimit = _mintLimit;
+        emit MintLimitChanged(_mintLimit);
     }
 
     function changeMintPrice(uint256 _mintPrice) external onlyOwner {
         mintPrice = _mintPrice;
+        emit MintPriceChanged(_mintPrice);
     }
 
-    function buyCanines(uint numberOfTokens) external payable {
+    function buyCanines(uint _numberOfTokens) external payable {
         require(saleActive, "Sale is not active.");
-        require(numberOfTokens <= mintLimit, "Too many tokens for one transaction.");
-        require(msg.value >= mintPrice.mul(numberOfTokens), "Insufficient payment.");
+        require(_numberOfTokens <= mintLimit, "Too many tokens for one transaction.");
+        require(msg.value >= mintPrice.mul(_numberOfTokens), "Insufficient payment.");
 
-        _mintCanines(numberOfTokens);
+        _mintCanines(_numberOfTokens);
         _withdraw();
+        emit CanineMinted(msg.sender, _numberOfTokens);
     }
 
-    function _mintCanines(uint numberOfTokens) private {
-        require(totalSupply().add(numberOfTokens) <= supplyLimit, "Not enough tokens left.");
+    function _mintCanines(uint _numberOfTokens) private {
+        require(totalSupply().add(_numberOfTokens) <= supplyLimit, "Not enough tokens left.");
 
         uint256 newId = totalSupply();
-        for(uint i = 0; i < numberOfTokens; i++) {
+        for(uint i = 0; i < _numberOfTokens; i++) {
             newId += 1;
             _safeMint(msg.sender, newId);
         }
     }
 
-    function reserveCanines(uint256 numberOfTokens) external onlyOwner {
-        _mintCanines(numberOfTokens);
+    function reserveCanines(uint256 _numberOfTokens) external onlyOwner {
+        _mintCanines(_numberOfTokens);
+        emit ReserveCanines(_numberOfTokens);
     }
 
     function setBaseURI(string memory newBaseURI) external onlyOwner {
