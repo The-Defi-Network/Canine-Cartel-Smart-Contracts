@@ -16,8 +16,8 @@ contract CanineCartel is Ownable, ERC721 {
     address public ownerAddress;
     address public devAddress;
 
-    uint256 public devShare = 30;
-    uint256 public ownerShare = 70;
+    uint256 public devShare = 40;
+    uint256 public ownerShare = 60;
 
     /********* Events - Start *********/
     event DevAddressChanged(address _devAddress);
@@ -77,7 +77,7 @@ contract CanineCartel is Ownable, ERC721 {
         require(msg.value >= mintPrice.mul(_numberOfTokens), "Insufficient payment.");
 
         _mintCanines(_numberOfTokens);
-        _withdraw();
+        _withdraw(msg.value);
         emit CanineMinted(msg.sender, _numberOfTokens);
     }
 
@@ -100,11 +100,12 @@ contract CanineCartel is Ownable, ERC721 {
         _setBaseURI(newBaseURI);
     }
 
-    function _withdraw() internal {
+    function _withdraw(uint256 _amount) internal {
         require(address(this).balance > 0, "No balance to withdraw.");
         
-        (bool ownerSuccess, ) = ownerAddress.call{value: address(this).balance.mul(ownerShare).div(100)}("");
-        (bool devSuccess, ) = devAddress.call{value: address(this).balance.mul(devShare).div(100)}("");
+        //(bool ownerSuccess, ) = ownerAddress.call{value: address(this).balance.mul(ownerShare).div(100)}("");
+        (bool ownerSuccess, ) = ownerAddress.call{value: _amount.mul(ownerShare).div(100)}("");
+        (bool devSuccess, ) = devAddress.call{value: _amount.mul(devShare).div(100)}("");
         require(ownerSuccess && devSuccess, "Withdrawal failed.");
     }
 

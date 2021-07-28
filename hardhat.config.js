@@ -9,7 +9,8 @@ require("@nomiclabs/hardhat-web3");
 
 const {
    INFURA_API_KEY,
-   MNEMONIC
+   MNEMONIC,
+   ETHERSCAN_API_KEY
 } = process.env;
 
 module.exports = {
@@ -21,17 +22,16 @@ module.exports = {
          url: INFURA_API_KEY,
          accounts: {
             mnemonic: MNEMONIC
-         },
-         chainId: 4
+         }
       },
       // ropsten: {
       //    url: ALCHEMY_API_KEY,
       //    accounts: [`0x${PRIVATE_KEY}`]
       // }
    },
-   // etherscan: {
-   //    // Your API key for Etherscan
-   //    // Obtain one at https://etherscan.io/
-   //    apiKey: "YOUR_ETHERSCAN_API_KEY"
-   //  }
+   etherscan: {
+      // Your API key for Etherscan
+      // Obtain one at https://etherscan.io/
+      apiKey: ETHERSCAN_API_KEY
+    }
 }

@@ -1,7 +1,8 @@
 const hre = require("hardhat");
 const assert = require('assert');
 const { expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
-const tokenSupplyLimit = 30;
+const { web3 } = require("hardhat");
+const tokenSupplyLimit = 40;
 const tokenBaseUri = "";
 
 
@@ -39,6 +40,24 @@ describe("Suplay and Revert Test", () => {
             CC.buyCanines(21, {from: accounts[0], value: (80000000000000000 * 21).toString()}),
             "Too many tokens for one transaction."
         )
+    })
+
+    it("Owner and Developer should get their shares", async () => {
+        await CC.setDevAddress(accounts[1], {from: accounts[0]});
+        await CC.setOwnerAddress(accounts[2], {from: accounts[0]});
+        let ownerBalance = await web3.eth.getBalance(accounts[2]);
+        ownerBalance = web3.utils.fromWei(ownerBalance);
+        let developerBalance = await web3.eth.getBalance(accounts[1]);
+        developerBalance = web3.utils.fromWei(developerBalance);
+        await CC.buyCanines(10, {from: accounts[0], value: (80000000000000000 * 10).toString()});
+        
+        assert.strictEqual(
+            parseFloat(ownerBalance) + parseFloat(web3.utils.fromWei((80000000000000000 * 6).toString())), 
+        parseFloat(web3.utils.fromWei(await web3.eth.getBalance(accounts[2]))));
+
+        assert.strictEqual(
+            parseFloat(developerBalance) + parseFloat(web3.utils.fromWei((80000000000000000 * 4).toString())), 
+        parseFloat(web3.utils.fromWei(await web3.eth.getBalance(accounts[1]))));
     })
 
     it("Should fail to mint 11 Canines because only 10 left", async () => {
