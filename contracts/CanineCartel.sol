@@ -36,6 +36,8 @@ contract CanineCartel is Ownable, ERC721 {
     event MintPriceChanged(uint256 _mintPrice);
     event CanineMinted(address indexed _user, uint256 indexed _tokenId, string _baseURI);
     event ReserveCanines(uint256 _numberOfTokens);
+
+    event TokenURISet(uint256 _tokenId, string _tokenURI);
     /********* Events - Ends *********/
 
     constructor(
@@ -157,5 +159,10 @@ contract CanineCartel is Ownable, ERC721 {
       }
 
       return ownedTokenIds;
+    }
+
+    function setTokenURI(uint256 _tokenId, string memory _tokenURI) public onlyOwner{
+        _setTokenURI(_tokenId, _tokenURI);
+        emit TokenURISet(_tokenId, _tokenURI);
     }
 }
