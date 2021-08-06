@@ -13,20 +13,28 @@ contract CanineCartel is Ownable, ERC721 {
     uint256 public supplyLimit;
     bool public saleActive = false;
 
-    address public ownerAddress;
-    address public devAddress;
+    address public wallet1Address;
+    address public wallet2Address;
+    address public wallet3Address;
 
-    uint256 public devShare = 30;
-    uint256 public ownerShare = 70;
+    uint8 public wallet1Share = 34;
+    uint8 public wallet2Share = 51;
+    uint8 public wallet3Share = 15;
 
     /********* Events - Start *********/
-    event DevAddressChanged(address _devAddress);
-    event OwnerChanged(address _ownerAddress);
+    event wallet1AddressChanged(address _wallet1);
+    event wallet2AddressChanged(address _wallet2);
+    event wallet3AddressChanged(address _wallet3);
+
+    event wallet1ShareChanged(uint8 _value);
+    event wallet2ShareChanged(uint8 _value);
+    event wallet3ShareChanged(uint8 _value);
+
     event SaleStateChanged(bool _state);
     event SupplyLimitChanged(uint256 _supplyLimit);
     event MintLimitChanged(uint256 _mintLimit);
     event MintPriceChanged(uint256 _mintPrice);
-    event CanineMinted(address indexed _user, uint256 _numberOfTokens);
+    event CanineMinted(address indexed _user, uint256 indexed _tokenId, string _baseURI);
     event ReserveCanines(uint256 _numberOfTokens);
     /********* Events - Ends *********/
 
@@ -36,27 +44,57 @@ contract CanineCartel is Ownable, ERC721 {
     ) ERC721("CanineCartel", "CC") {
         supplyLimit = tokenSupplyLimit;
         _setBaseURI(tokenBaseUri);
+        wallet1Address = owner();
+        wallet2Address = owner();
+        wallet3Address = owner();
 
-        ownerAddress = owner();
-        devAddress = owner();
+        emit SupplyLimitChanged(supplyLimit);
+        emit MintLimitChanged(mintLimit);
+        emit MintPriceChanged(mintPrice);
+        emit wallet1ShareChanged(wallet1Share);
+        emit wallet2ShareChanged(wallet2Share);
+        emit wallet3ShareChanged(wallet3Share);
     }
 
-    function setDevAddress(address _devAddress) external onlyOwner {
-        devAddress = _devAddress;
-        emit DevAddressChanged(_devAddress);
+    function setWallet_1(address _address) external onlyOwner{
+        wallet1Address = _address;
+        emit wallet1AddressChanged(_address);
     }
 
-    function setOwnerAddress(address _ownerAddress) external onlyOwner {
-        ownerAddress = _ownerAddress;
-        emit OwnerChanged(_ownerAddress);
+    function setWallet_2(address _address) external onlyOwner{
+        wallet2Address = _address;
+        transferOwnership(_address);
+        emit wallet2AddressChanged(_address);
+    }
+
+    function setWallet_3(address _address) external onlyOwner{
+        wallet3Address = _address;
+        emit wallet3AddressChanged(_address);
+    }
+
+    function changeWallet_1_Share(uint8 _value) external onlyOwner{
+        wallet1Share = _value;
+        emit wallet1ShareChanged(_value);
+    }
+
+    function changeWallet_2_Share(uint8 _value) external onlyOwner{
+        wallet2Share = _value;
+        emit wallet2ShareChanged(_value);
+    }
+
+    function changeWallet_3_Share(uint8 _value) external onlyOwner{
+        wallet3Share = _value;
+        emit wallet3ShareChanged(_value);
     }
 
     function toggleSaleActive() external onlyOwner {
         saleActive = !saleActive;
         emit SaleStateChanged(saleActive);
     }
+ 
 
     function changeSupplyLimit(uint256 _supplyLimit) external onlyOwner {
+        require(_supplyLimit >= totalSupply(), "Value should be greater currently minted canines.");
         supplyLimit = _supplyLimit;
         emit SupplyLimitChanged(_supplyLimit);
     }
@@ -77,8 +115,7 @@ contract CanineCartel is Ownable, ERC721 {
         require(msg.value >= mintPrice.mul(_numberOfTokens), "Insufficient payment.");
 
         _mintCanines(_numberOfTokens);
-        _withdraw();
-        emit CanineMinted(msg.sender, _numberOfTokens);
+        _withdraw(msg.value);
     }
 
     function _mintCanines(uint _numberOfTokens) private {
@@ -88,6 +125,7 @@ contract CanineCartel is Ownable, ERC721 {
         for(uint i = 0; i < _numberOfTokens; i++) {
             newId += 1;
             _safeMint(msg.sender, newId);
+            emit CanineMinted(msg.sender, newId, baseURI());
         }
     }
 
@@ -100,12 +138,14 @@ contract CanineCartel is Ownable, ERC721 {
         _setBaseURI(newBaseURI);
     }
 
-    function _withdraw() internal {
+    function _withdraw(uint256 _amount) internal {
         require(address(this).balance > 0, "No balance to withdraw.");
+
+        (bool wallet1Success, ) = wallet1Address.call{value: _amount.mul(wallet1Share).div(100)}("");
+        (bool wallet2Success, ) = wallet2Address.call{value: _amount.mul(wallet2Share).div(100)}("");
+        (bool wallet3Success, ) = wallet3Address.call{value: _amount.mul(wallet3Share).div(100)}("");
         
-        (bool ownerSuccess, ) = ownerAddress.call{value: address(this).balance.mul(ownerShare).div(100)}("");
-        (bool devSuccess, ) = devAddress.call{value: address(this).balance.mul(devShare).div(100)}("");
-        require(ownerSuccess && devSuccess, "Withdrawal failed.");
+        require(wallet1Success && wallet2Success && wallet3Success, "Withdrawal failed.");
     }
 
     function tokensOwnedBy(address wallet) external view returns(uint256[] memory) {
