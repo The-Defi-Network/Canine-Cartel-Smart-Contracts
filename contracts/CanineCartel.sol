@@ -21,6 +21,8 @@ contract CanineCartel is Ownable, ERC721 {
     uint8 public wallet2Share = 51;
     uint8 public wallet3Share = 15;
 
+    mapping(uint256 => string) styles;
+
     /********* Events - Start *********/
     event wallet1AddressChanged(address _wallet1);
     event wallet2AddressChanged(address _wallet2);
@@ -38,6 +40,9 @@ contract CanineCartel is Ownable, ERC721 {
     event ReserveCanines(uint256 _numberOfTokens);
 
     event TokenURISet(uint256 _tokenId, string _tokenURI);
+    event NameChanged(uint256 _tokenId, string _name);
+    event StyleAdded(uint256 _id, string _URI);
+    event StyleRemoved(uint256 _id, string _URI);
     /********* Events - Ends *********/
 
     constructor(
@@ -161,8 +166,67 @@ contract CanineCartel is Ownable, ERC721 {
       return ownedTokenIds;
     }
 
-    function setTokenURI(uint256 _tokenId, string memory _tokenURI) public onlyOwner{
-        _setTokenURI(_tokenId, _tokenURI);
-        emit TokenURISet(_tokenId, _tokenURI);
+    /*
+        This function is used to set Token uri
+        param _id: style number
+        param _tokenId: tokenId
+    */
+
+    function setTokenURI(uint256 _id, uint256 _tokenId) public{
+        require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
+        require(_exists(_tokenId), "NFT dosen't exists.");
+        bytes memory URI = abi.encodePacked(styles[_id], uint2str(_tokenId));
+        _setTokenURI(_tokenId, string(URI));
+        emit TokenURISet(_tokenId, string(URI));
+    }
+
+    /*
+        This function is used to add styles
+        param _id: style number
+        param _URI: string URI
+    */
+    function addStyle(uint256 _id, string memory _URI)external onlyOwner{
+        require(_id > 0, "Invalid style Id.");
+        styles[_id] = _URI;
+        emit StyleAdded(_id, _URI);
+    }
+
+    /*
+        This function is used to remove styles
+        param _id: style number
+    */
+    function removeStyle(uint256 _id)external onlyOwner{
+        require(_id > 0, "Invalid style Id.");
+        emit StyleRemoved(_id, styles[_id]);
+        delete styles[_id];
+    }
+
+     /*
+        This function is used to change NFT name
+        param _tokenId: tokenId
+        param _name: name
+    */
+    function nameNFT(uint256 _tokenId, string memory _name) public{
+        require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
+        emit NameChanged(_tokenId, _name);
+    }
+
+    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint j = _i;
+        uint len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint k = len - 1;
+        while (_i != 0) {
+            bstr[k--] = byte(uint8(48 + _i % 10));
+            _i /= 10;
+        }
+        return string(bstr);
     }
 }
