@@ -28,15 +28,13 @@ contract CanineCartel is Ownable, ERC721 {
     event wallet2AddressChanged(address _wallet2);
     event wallet3AddressChanged(address _wallet3);
 
-    event wallet1ShareChanged(uint8 _value);
-    event wallet2ShareChanged(uint8 _value);
-    event wallet3ShareChanged(uint8 _value);
+    event SharesChanged(uint8 _value1, uint8 _value2, uint8 _value3);
 
     event SaleStateChanged(bool _state);
     event SupplyLimitChanged(uint256 _supplyLimit);
     event MintLimitChanged(uint256 _mintLimit);
     event MintPriceChanged(uint256 _mintPrice);
-    event CanineMinted(address indexed _user, uint256 indexed _tokenId, string _baseURI);
+    event CanineMinted(address indexed _user, uint256 indexed _tokenId, string _tokenURI);
     event ReserveCanines(uint256 _numberOfTokens);
 
     event TokenURISet(uint256 _tokenId, string _tokenURI);
@@ -58,9 +56,7 @@ contract CanineCartel is Ownable, ERC721 {
         emit SupplyLimitChanged(supplyLimit);
         emit MintLimitChanged(mintLimit);
         emit MintPriceChanged(mintPrice);
-        emit wallet1ShareChanged(wallet1Share);
-        emit wallet2ShareChanged(wallet2Share);
-        emit wallet3ShareChanged(wallet3Share);
+        emit SharesChanged(wallet1Share, wallet2Share, wallet3Share);
     }
 
     function setWallet_1(address _address) external onlyOwner{
@@ -79,20 +75,14 @@ contract CanineCartel is Ownable, ERC721 {
         emit wallet3AddressChanged(_address);
     }
 
-    function changeWallet_1_Share(uint8 _value) external onlyOwner{
-        wallet1Share = _value;
-        emit wallet1ShareChanged(_value);
+    function changeWalletShares(uint8 _value1, uint8 _value2, uint8 _value3) external onlyOwner{
+        require(_value1 + _value2 + _value3 == 100, "Shares are not adding up to 100.");
+        wallet1Share = _value1;
+        wallet2Share = _value2;
+        wallet3Share = _value3;
+        emit SharesChanged(_value1, _value2, _value3);
     }
 
-    function changeWallet_2_Share(uint8 _value) external onlyOwner{
-        wallet2Share = _value;
-        emit wallet2ShareChanged(_value);
-    }
-
-    function changeWallet_3_Share(uint8 _value) external onlyOwner{
-        wallet3Share = _value;
-        emit wallet3ShareChanged(_value);
-    }
 
     function toggleSaleActive() external onlyOwner {
         saleActive = !saleActive;
@@ -156,14 +146,14 @@ contract CanineCartel is Ownable, ERC721 {
     }
 
     function tokensOwnedBy(address wallet) external view returns(uint256[] memory) {
-      uint tokenCount = balanceOf(wallet);
+        uint tokenCount = balanceOf(wallet);
 
-      uint256[] memory ownedTokenIds = new uint256[](tokenCount);
-      for(uint i = 0; i < tokenCount; i++){
+        uint256[] memory ownedTokenIds = new uint256[](tokenCount);
+        for(uint i = 0; i < tokenCount; i++){
         ownedTokenIds[i] = tokenOfOwnerByIndex(wallet, i);
-      }
-
-      return ownedTokenIds;
+        }
+        
+        return ownedTokenIds;
     }
 
     /*
@@ -210,6 +200,21 @@ contract CanineCartel is Ownable, ERC721 {
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
         emit NameChanged(_tokenId, _name);
     }
+
+    function emergancyWithdraw() external onlyOwner{
+        require(address(this).balance > 0, "No funds in smart Contract.");
+        (bool success, ) = owner().call{value: address(this).balance}("");
+        require(success, "Withdraw Failed.");
+    }
+
+    function withdrawAll() public {
+        require(msg.sender == wallet1Address || msg.sender == wallet2Address || msg.sender == wallet3Address, "Only share holders can call this method.");
+        _withdraw(address(this).balance);
+    }
+
+    // function sendNFT(address to, uint256 tokenId, bytes memory data) external payable {
+    //     safeTransferFrom(msg.sender, to, tokenId, data);
+    // }
 
     function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
         if (_i == 0) {
