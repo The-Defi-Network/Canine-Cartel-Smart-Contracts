@@ -1,8 +1,8 @@
 const hre = require("hardhat");
 
 async function main() {
-  const tokenSupplyLimit = 100;
-  const tokenBaseUri = "";
+  const tokenSupplyLimit = 30000;
+  const tokenBaseUri = "CanineCartel";
   
   const CanineCartel = await hre.ethers.getContractFactory("CanineCartel");
   const canineCartel = await CanineCartel.deploy(tokenSupplyLimit, tokenBaseUri);
