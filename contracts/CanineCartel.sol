@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: None
-pragma solidity ^0.7.6;
+pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+
 
 contract CanineCartel is Ownable, ERC721 {
     using SafeMath for uint256;
+    using Strings for uint256;
 
     uint256 public mintPrice = 0.05 ether;
     uint256 public mintLimit = 20;
 
     uint256 public supplyLimit;
     bool public saleActive = false;
+
+    uint256 namingPrice = 0.01 ether;
 
     address public wallet1Address;
     address public wallet2Address;
@@ -21,7 +27,13 @@ contract CanineCartel is Ownable, ERC721 {
     uint8 public wallet2Share = 50;
     uint8 public wallet3Share = 17;
 
-    mapping(uint256 => string) styles;
+    mapping(uint256 => uint256) tokenStyle;
+    mapping(uint256 => bool) allowedStyles;
+    mapping(uint256 => uint256) stylePrice;
+
+    string public baseURI = "";
+
+    uint256 public totalSupply = 0;
 
     /********* Events - Start *********/
     event wallet1AddressChanged(address _wallet1);
@@ -38,27 +50,43 @@ contract CanineCartel is Ownable, ERC721 {
     event CanineMinted(address indexed _user, uint256 indexed _tokenId, string _tokenURI);
     event ReserveCanines(uint256 _numberOfTokens);
 
-    event TokenURISet(uint256 _tokenId, string _tokenURI);
+    event StyleChanged(uint256 _tokenId, uint256 _styleId);
     event NameChanged(uint256 _tokenId, string _name);
-    event StyleAdded(uint256 _id, string _URI);
-    event StyleRemoved(uint256 _id, string _URI);
+    event StyleAdded(uint256 _id);
+    event StyleRemoved(uint256 _id);
+    event StylePriceChanged(uint256 _styleId, uint256 _price);
+    event NamingPriceChanged(uint256 _price);
     /********* Events - Ends *********/
 
     constructor(
         uint256 tokenSupplyLimit,
-        string memory tokenBaseUri
-    ) ERC721("CanineCartel", "CC") {
+        string memory _baseURI
+    ) ERC721("CanineCartel", "CARTEL") {
+        
         supplyLimit = tokenSupplyLimit;
-        _setBaseURI(tokenBaseUri);
         wallet1Address = owner();
         wallet2Address = owner();
         wallet3Address = owner();
+
+        baseURI = _baseURI;
 
         emit SupplyLimitChanged(supplyLimit);
         emit MintLimitChanged(mintLimit);
         emit MintPriceChanged(mintPrice);
         emit SharesChanged(wallet1Share, wallet2Share, wallet3Share);
-        emit BaseURIChanged(tokenBaseUri);
+        emit BaseURIChanged(_baseURI);
+    }
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+
+        return bytes(baseURI).length > 0 ? 
+        string(abi.encodePacked(baseURI, tokenStyle[tokenId], "/", tokenId.toString())) : "";
+    }
+
+    function setBaseURI(string memory _baseURI) external onlyOwner {
+        baseURI = _baseURI;
+        emit BaseURIChanged(_baseURI);
     }
 
     function setWallet_1(address _address) external onlyOwner{
@@ -85,15 +113,13 @@ contract CanineCartel is Ownable, ERC721 {
         emit SharesChanged(_value1, _value2, _value3);
     }
 
-
     function toggleSaleActive() external onlyOwner {
         saleActive = !saleActive;
         emit SaleStateChanged(saleActive);
     }
- 
 
     function changeSupplyLimit(uint256 _supplyLimit) external onlyOwner {
-        require(_supplyLimit >= totalSupply(), "Value should be greater currently minted canines.");
+        require(_supplyLimit >= totalSupply, "Value should be greater currently minted canines.");
         supplyLimit = _supplyLimit;
         emit SupplyLimitChanged(_supplyLimit);
     }
@@ -116,12 +142,14 @@ contract CanineCartel is Ownable, ERC721 {
         _mintCanines(_numberOfTokens);
     }
 
-    function _mintCanines(uint _numberOfTokens) private {
-        require(totalSupply().add(_numberOfTokens) <= supplyLimit, "Not enough tokens left.");
+    function _mintCanines(uint _numberOfTokens) internal {
+        require(totalSupply.add(_numberOfTokens) <= supplyLimit, "Not enough tokens left.");
 
-        uint256 newId = totalSupply();
+        uint256 newId = totalSupply;
         for(uint i = 0; i < _numberOfTokens; i++) {
             newId += 1;
+            totalSupply = totalSupply.add(1);
+
             _safeMint(msg.sender, newId);
             emit CanineMinted(msg.sender, newId, tokenURI(newId));
         }
@@ -130,11 +158,6 @@ contract CanineCartel is Ownable, ERC721 {
     function reserveCanines(uint256 _numberOfTokens) external onlyOwner {
         _mintCanines(_numberOfTokens);
         emit ReserveCanines(_numberOfTokens);
-    }
-
-    function setBaseURI(string memory newBaseURI) external onlyOwner {
-        _setBaseURI(newBaseURI);
-        emit BaseURIChanged(newBaseURI);
     }
 
     /*
@@ -151,28 +174,40 @@ contract CanineCartel is Ownable, ERC721 {
         require(wallet1Success && wallet2Success && wallet3Success, "Withdrawal failed.");
     }
 
-    /*
-        This function is used to set Token uri
-        param _id: style number
-        param _tokenId: tokenId
+    /**
+     * This function changes the price of the particular style implemented
+     * param _styleId: style number
+     * param _price: price of style change
     */
-    function setTokenURI(uint256 _id, uint256 _tokenId) public{
-        require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
-        require(_exists(_tokenId), "NFT dosen't exists.");
-        bytes memory URI = abi.encodePacked(styles[_id], uint2str(_tokenId));
-        _setTokenURI(_tokenId, string(URI));
-        emit TokenURISet(_tokenId, string(URI));
+    function setStylePrice(uint256 _styleId, uint256 _price) external onlyOwner {
+        require(allowedStyles[_styleId], "Style is not allowed.");
+        stylePrice[_styleId] = _price;
+
+        emit StylePriceChanged(_styleId, _price);
     }
 
-    /*
-        This function is used to set Token uri by owner
-        param _tokenId: tokenId
-        param _tokenURI: tokenURI
+    /**
+     * This function changes the style of the particular token
+     * param _namingPrice: The price for naming your canine
     */
-    function ownerSetTokenURI(uint256 _tokenId, string memory _tokenURI) external onlyOwner{
-        require(_exists(_tokenId), "NFT dosen't exists.");
-        _setTokenURI(_tokenId, _tokenURI);
-        emit TokenURISet(_tokenId, _tokenURI);
+    function setNamingPrice(uint256 _namingPrice) external onlyOwner {
+        namingPrice = _namingPrice;
+
+        emit NamingPriceChanged(_namingPrice);
+    }
+
+    /**
+     * This function changes the style of the particular token
+     * param _styleId: style number
+     * param _tokenId: tokenId
+    */
+    function changeStyle(uint256 _styleId, uint256 _tokenId) external payable {
+        require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
+        require(allowedStyles[_styleId], "Style is not allowed.");
+        require(stylePrice[_styleId] == msg.value, "Price is incorrect");
+
+        tokenStyle[_tokenId] = _styleId;
+        emit StyleChanged(_tokenId, _styleId);
     }
 
     /*
@@ -180,20 +215,22 @@ contract CanineCartel is Ownable, ERC721 {
         param _id: style number
         param _URI: string URI
     */
-    function addStyle(uint256 _id, string memory _URI)external onlyOwner{
-        require(_id > 0, "Invalid style Id.");
-        styles[_id] = _URI;
-        emit StyleAdded(_id, _URI);
+    function addStyle(uint256 _styleId) external onlyOwner {
+        require(_styleId > 0, "Invalid style Id.");
+        
+        allowedStyles[_styleId] = true;
+        emit StyleAdded(_styleId);
     }
 
     /*
         This function is used to remove styles
         param _id: style number
     */
-    function removeStyle(uint256 _id)external onlyOwner{
-        require(_id > 0, "Invalid style Id.");
-        emit StyleRemoved(_id, styles[_id]);
-        delete styles[_id];
+    function removeStyle(uint256 _styleId) external onlyOwner {
+        require(_styleId > 0, "Invalid style Id.");
+        
+        allowedStyles[_styleId] = false;
+        emit StyleRemoved(_styleId);
     }
 
      /*
@@ -201,45 +238,28 @@ contract CanineCartel is Ownable, ERC721 {
         param _tokenId: tokenId
         param _name: name
     */
-    function nameNFT(uint256 _tokenId, string memory _name) public{
+    function nameNFT(uint256 _tokenId, string memory _name) external payable {
+        require(msg.value == namingPrice, "Incorrect price paid");
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
+
         emit NameChanged(_tokenId, _name);
     }
 
     /*
-        thio function will send all contract balance to its contract owner.
+        This function will send all contract balance to its contract owner.
     */
-    function emergancyWithdraw() external onlyOwner{
+    function emergencyWithdraw() external onlyOwner {
         require(address(this).balance > 0, "No funds in smart Contract.");
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Withdraw Failed.");
     }
 
     /*
-        thio function will call _withdraw() function.
+        This function will call _withdraw() function.
         any of the one shareholder can call this function.
     */
-    function withdrawAll() public {
+    function withdrawAll() external onlyOwner {
         require(msg.sender == wallet1Address || msg.sender == wallet2Address || msg.sender == wallet3Address, "Only share holders can call this method.");
         _withdraw();
-    }
-
-    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
-        if (_i == 0) {
-            return "0";
-        }
-        uint j = _i;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint k = len - 1;
-        while (_i != 0) {
-            bstr[k--] = byte(uint8(48 + _i % 10));
-            _i /= 10;
-        }
-        return string(bstr);
     }
 }

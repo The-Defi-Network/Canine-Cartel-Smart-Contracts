@@ -14,7 +14,7 @@ const {
 } = process.env;
 
 module.exports = {
-   solidity: "0.7.6",
+   solidity: "0.8.4",
    defaultNetwork: "hardhat",
    networks: {
       hardhat: {},
