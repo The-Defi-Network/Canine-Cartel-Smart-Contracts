@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract CanineCartel is Ownable, ERC721 {
     using SafeMath for uint256;
 
-    uint256 public mintPrice = 80000000000000000;
+    uint256 public mintPrice = 0.05 ether;
     uint256 public mintLimit = 20;
 
     uint256 public supplyLimit;
@@ -17,9 +17,9 @@ contract CanineCartel is Ownable, ERC721 {
     address public wallet2Address;
     address public wallet3Address;
 
-    uint8 public wallet1Share = 34;
-    uint8 public wallet2Share = 51;
-    uint8 public wallet3Share = 15;
+    uint8 public wallet1Share = 33;
+    uint8 public wallet2Share = 50;
+    uint8 public wallet3Share = 17;
 
     mapping(uint256 => string) styles;
 
@@ -34,6 +34,7 @@ contract CanineCartel is Ownable, ERC721 {
     event SupplyLimitChanged(uint256 _supplyLimit);
     event MintLimitChanged(uint256 _mintLimit);
     event MintPriceChanged(uint256 _mintPrice);
+    event BaseURIChanged(string _baseURI);
     event CanineMinted(address indexed _user, uint256 indexed _tokenId, string _tokenURI);
     event ReserveCanines(uint256 _numberOfTokens);
 
@@ -57,6 +58,7 @@ contract CanineCartel is Ownable, ERC721 {
         emit MintLimitChanged(mintLimit);
         emit MintPriceChanged(mintPrice);
         emit SharesChanged(wallet1Share, wallet2Share, wallet3Share);
+        emit BaseURIChanged(tokenBaseUri);
     }
 
     function setWallet_1(address _address) external onlyOwner{
@@ -112,7 +114,6 @@ contract CanineCartel is Ownable, ERC721 {
         require(msg.value >= mintPrice.mul(_numberOfTokens), "Insufficient payment.");
 
         _mintCanines(_numberOfTokens);
-        _withdraw(msg.value);
     }
 
     function _mintCanines(uint _numberOfTokens) private {
@@ -122,7 +123,7 @@ contract CanineCartel is Ownable, ERC721 {
         for(uint i = 0; i < _numberOfTokens; i++) {
             newId += 1;
             _safeMint(msg.sender, newId);
-            emit CanineMinted(msg.sender, newId, baseURI());
+            emit CanineMinted(msg.sender, newId, tokenURI(newId));
         }
     }
 
@@ -133,11 +134,16 @@ contract CanineCartel is Ownable, ERC721 {
 
     function setBaseURI(string memory newBaseURI) external onlyOwner {
         _setBaseURI(newBaseURI);
+        emit BaseURIChanged(newBaseURI);
     }
 
-    function _withdraw(uint256 _amount) internal {
+    /*
+        thio function will send contract balance to its share holders
+        according to their shares.
+    */
+    function _withdraw() internal {
         require(address(this).balance > 0, "No balance to withdraw.");
-
+        uint256 _amount = address(this).balance;
         (bool wallet1Success, ) = wallet1Address.call{value: _amount.mul(wallet1Share).div(100)}("");
         (bool wallet2Success, ) = wallet2Address.call{value: _amount.mul(wallet2Share).div(100)}("");
         (bool wallet3Success, ) = wallet3Address.call{value: _amount.mul(wallet3Share).div(100)}("");
@@ -145,29 +151,28 @@ contract CanineCartel is Ownable, ERC721 {
         require(wallet1Success && wallet2Success && wallet3Success, "Withdrawal failed.");
     }
 
-    function tokensOwnedBy(address wallet) external view returns(uint256[] memory) {
-        uint tokenCount = balanceOf(wallet);
-
-        uint256[] memory ownedTokenIds = new uint256[](tokenCount);
-        for(uint i = 0; i < tokenCount; i++){
-        ownedTokenIds[i] = tokenOfOwnerByIndex(wallet, i);
-        }
-        
-        return ownedTokenIds;
-    }
-
     /*
         This function is used to set Token uri
         param _id: style number
         param _tokenId: tokenId
     */
-
     function setTokenURI(uint256 _id, uint256 _tokenId) public{
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
         require(_exists(_tokenId), "NFT dosen't exists.");
         bytes memory URI = abi.encodePacked(styles[_id], uint2str(_tokenId));
         _setTokenURI(_tokenId, string(URI));
         emit TokenURISet(_tokenId, string(URI));
+    }
+
+    /*
+        This function is used to set Token uri by owner
+        param _tokenId: tokenId
+        param _tokenURI: tokenURI
+    */
+    function ownerSetTokenURI(uint256 _tokenId, string memory _tokenURI) external onlyOwner{
+        require(_exists(_tokenId), "NFT dosen't exists.");
+        _setTokenURI(_tokenId, _tokenURI);
+        emit TokenURISet(_tokenId, _tokenURI);
     }
 
     /*
@@ -201,20 +206,23 @@ contract CanineCartel is Ownable, ERC721 {
         emit NameChanged(_tokenId, _name);
     }
 
+    /*
+        thio function will send all contract balance to its contract owner.
+    */
     function emergancyWithdraw() external onlyOwner{
         require(address(this).balance > 0, "No funds in smart Contract.");
         (bool success, ) = owner().call{value: address(this).balance}("");
         require(success, "Withdraw Failed.");
     }
 
+    /*
+        thio function will call _withdraw() function.
+        any of the one shareholder can call this function.
+    */
     function withdrawAll() public {
         require(msg.sender == wallet1Address || msg.sender == wallet2Address || msg.sender == wallet3Address, "Only share holders can call this method.");
-        _withdraw(address(this).balance);
+        _withdraw();
     }
-
-    // function sendNFT(address to, uint256 tokenId, bytes memory data) external payable {
-    //     safeTransferFrom(msg.sender, to, tokenId, data);
-    // }
 
     function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
         if (_i == 0) {
