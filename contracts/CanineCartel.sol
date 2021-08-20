@@ -69,7 +69,8 @@ contract CanineCartel is Ownable, ERC721 {
         wallet3Address = owner();
 
         baseURI = _baseURI;
-
+        
+        emit NamingPriceChanged(namingPrice);
         emit SupplyLimitChanged(supplyLimit);
         emit MintLimitChanged(mintLimit);
         emit MintPriceChanged(mintPrice);
@@ -182,7 +183,6 @@ contract CanineCartel is Ownable, ERC721 {
     function setStylePrice(uint256 _styleId, uint256 _price) external onlyOwner {
         require(allowedStyles[_styleId], "Style is not allowed.");
         stylePrice[_styleId] = _price;
-
         emit StylePriceChanged(_styleId, _price);
     }
 
@@ -192,7 +192,6 @@ contract CanineCartel is Ownable, ERC721 {
     */
     function setNamingPrice(uint256 _namingPrice) external onlyOwner {
         namingPrice = _namingPrice;
-
         emit NamingPriceChanged(_namingPrice);
     }
 
@@ -216,7 +215,7 @@ contract CanineCartel is Ownable, ERC721 {
         param _URI: string URI
     */
     function addStyle(uint256 _styleId) external onlyOwner {
-        require(_styleId > 0, "Invalid style Id.");
+        require(_styleId > 0 && !allowedStyles[_styleId], "Invalid style Id.");
         
         allowedStyles[_styleId] = true;
         emit StyleAdded(_styleId);
@@ -227,7 +226,7 @@ contract CanineCartel is Ownable, ERC721 {
         param _id: style number
     */
     function removeStyle(uint256 _styleId) external onlyOwner {
-        require(_styleId > 0, "Invalid style Id.");
+        require(_styleId > 0 && allowedStyles[_styleId], "Invalid style Id.");
         
         allowedStyles[_styleId] = false;
         emit StyleRemoved(_styleId);
@@ -241,7 +240,7 @@ contract CanineCartel is Ownable, ERC721 {
     function nameNFT(uint256 _tokenId, string memory _name) external payable {
         require(msg.value == namingPrice, "Incorrect price paid");
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
-
+        require(bytes(_name).length <= 32, "Name exceeds 32 charecters limit.");
         emit NameChanged(_tokenId, _name);
     }
 
@@ -258,7 +257,7 @@ contract CanineCartel is Ownable, ERC721 {
         This function will call _withdraw() function.
         any of the one shareholder can call this function.
     */
-    function withdrawAll() external onlyOwner {
+    function withdrawAll() external {
         require(msg.sender == wallet1Address || msg.sender == wallet2Address || msg.sender == wallet3Address, "Only share holders can call this method.");
         _withdraw();
     }
