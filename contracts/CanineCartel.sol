@@ -27,13 +27,16 @@ contract CanineCartel is Ownable, ERC721 {
     uint8 public wallet2Share = 50;
     uint8 public wallet3Share = 17;
 
-    mapping(uint256 => uint256) tokenStyle;
-    mapping(uint256 => bool) allowedStyles;
-    mapping(uint256 => uint256) stylePrice;
+    uint256 public charLimit = 32;
+
+    mapping(uint256 => uint256) public tokenStyle;
+    mapping(uint256 => bool) public allowedStyles;
+    mapping(uint256 => uint256) public stylePrice;
 
     string public baseURI = "";
 
     uint256 public totalSupply = 0;
+    bool public namingAllowed = true;
 
     /********* Events - Start *********/
     event wallet1AddressChanged(address _wallet1);
@@ -82,7 +85,15 @@ contract CanineCartel is Ownable, ERC721 {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
 
         return bytes(baseURI).length > 0 ? 
-        string(abi.encodePacked(baseURI, tokenStyle[tokenId], "/", tokenId.toString())) : "";
+        string(abi.encodePacked(baseURI, tokenStyle[tokenId].toString(), "/", tokenId.toString())) : "";
+    }
+
+    function setCharacterLimit(uint256 _charLimit) external onlyOwner {
+        charLimit = _charLimit;
+    }
+
+    function toggleNaming(bool _namingAllowed) external onlyOwner {
+        namingAllowed = _namingAllowed;
     }
 
     function setBaseURI(string memory _baseURI) external onlyOwner {
@@ -215,7 +226,7 @@ contract CanineCartel is Ownable, ERC721 {
         param _URI: string URI
     */
     function addStyle(uint256 _styleId) external onlyOwner {
-        require(_styleId > 0 && !allowedStyles[_styleId], "Invalid style Id.");
+        require(_styleId >= 0 && !allowedStyles[_styleId], "Invalid style Id.");
         
         allowedStyles[_styleId] = true;
         emit StyleAdded(_styleId);
@@ -239,8 +250,9 @@ contract CanineCartel is Ownable, ERC721 {
     */
     function nameNFT(uint256 _tokenId, string memory _name) external payable {
         require(msg.value == namingPrice, "Incorrect price paid");
+        require(namingAllowed, "Naming is disabled.");
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
-        require(bytes(_name).length <= 32, "Name exceeds 32 charecters limit.");
+        require(bytes(_name).length <= charLimit, "Name exceeds characters limit.");
         emit NameChanged(_tokenId, _name);
     }
 
