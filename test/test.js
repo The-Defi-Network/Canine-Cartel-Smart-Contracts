@@ -6,7 +6,7 @@ const tokenSupplyLimit = 30;
 const tokenBaseUri = "";
 
 
-describe("Suplay and Revert Test", () => {
+describe("Supply and Revert Test", () => {
     let accounts = [];
     let CC;
     before(async function () {
