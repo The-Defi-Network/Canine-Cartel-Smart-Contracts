@@ -58,6 +58,7 @@ contract CanineCartel is Ownable, ERC721 {
     event StyleRemoved(uint256 _id);
     event StylePriceChanged(uint256 _styleId, uint256 _price);
     event NamingPriceChanged(uint256 _price);
+    event NamingStateChanged(bool _namingAllowed);
     /********* Events - Ends *********/
 
     constructor(
@@ -80,6 +81,7 @@ contract CanineCartel is Ownable, ERC721 {
         emit SharesChanged(wallet1Share, wallet2Share, wallet3Share);
         emit BaseURIChanged(_baseURI);
         emit StyleAdded(0);
+        emit NamingStateChanged(true);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -95,6 +97,7 @@ contract CanineCartel is Ownable, ERC721 {
 
     function toggleNaming(bool _namingAllowed) external onlyOwner {
         namingAllowed = _namingAllowed;
+        emit NamingStateChanged(_namingAllowed);
     }
 
     function setBaseURI(string memory _baseURI) external onlyOwner {
