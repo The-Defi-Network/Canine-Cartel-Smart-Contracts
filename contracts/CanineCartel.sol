@@ -26,7 +26,7 @@ contract CanineCartel is Ownable, ERC721 {
     uint8 public wallet2Share = 50;
     uint8 public wallet3Share = 17;
 
-    uint256 public charLimit = 32;
+    uint8 public charLimit = 32;
 
     mapping(uint256 => uint256) public tokenStyle;
     mapping(uint256 => bool) public allowedStyles;
@@ -89,7 +89,7 @@ contract CanineCartel is Ownable, ERC721 {
         string(abi.encodePacked(baseURI, tokenStyle[tokenId].toString(), "/", tokenId.toString())) : "";
     }
 
-    function setCharacterLimit(uint256 _charLimit) external onlyOwner {
+    function setCharacterLimit(uint8 _charLimit) external onlyOwner {
         charLimit = _charLimit;
     }
 
@@ -250,7 +250,7 @@ contract CanineCartel is Ownable, ERC721 {
         param _name: name
     */
     function nameNFT(uint256 _tokenId, string memory _name) external payable {
-        require(msg.value == namingPrice, "Incorrect price paid");
+        require(msg.value == namingPrice, "Incorrect price paid.");
         require(namingAllowed, "Naming is disabled.");
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
         require(bytes(_name).length <= charLimit, "Name exceeds characters limit.");

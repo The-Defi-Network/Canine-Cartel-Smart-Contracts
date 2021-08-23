@@ -10,7 +10,7 @@ require("@nomiclabs/hardhat-web3");
 const {
    API_URL,
    PRIVATE_KEY,
-   ETHERSCAN_API_KEY
+   ETHERSCAN_API_KEY,
 } = process.env;
 
 module.exports = {
