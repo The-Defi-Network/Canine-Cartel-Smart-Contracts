@@ -8,8 +8,8 @@ require("@nomiclabs/hardhat-solhint");
 require("@nomiclabs/hardhat-web3");
 
 const {
-   RINKEBY_RPC_URL,
-   MNEMONIC,
+   API_URL,
+   PRIVATE_KEY,
    ETHERSCAN_API_KEY
 } = process.env;
 
@@ -19,12 +19,8 @@ module.exports = {
    networks: {
       hardhat: {},
       rinkeby: {
-         url: RINKEBY_RPC_URL,
-         accounts: {
-            mnemonic: MNEMONIC
-         },
-         gas: 2100000, 
-         gasPrice: 8000000000
+         url: API_URL,
+         accounts: [`0x${PRIVATE_KEY}`] 
       },
       // ropsten: {
       //    url: ALCHEMY_API_KEY,
