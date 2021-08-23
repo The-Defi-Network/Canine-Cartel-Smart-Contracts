@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-
 contract CanineCartel is Ownable, ERC721 {
     using SafeMath for uint256;
     using Strings for uint256;
@@ -72,6 +71,7 @@ contract CanineCartel is Ownable, ERC721 {
         wallet3Address = owner();
 
         baseURI = _baseURI;
+        allowedStyles[0] = true;
         
         emit NamingPriceChanged(namingPrice);
         emit SupplyLimitChanged(supplyLimit);
@@ -79,6 +79,7 @@ contract CanineCartel is Ownable, ERC721 {
         emit MintPriceChanged(mintPrice);
         emit SharesChanged(wallet1Share, wallet2Share, wallet3Share);
         emit BaseURIChanged(_baseURI);
+        emit StyleAdded(0);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -214,7 +215,7 @@ contract CanineCartel is Ownable, ERC721 {
     function changeStyle(uint256 _styleId, uint256 _tokenId) external payable {
         require(ownerOf(_tokenId) == msg.sender, "Only owner of NFT can change name.");
         require(allowedStyles[_styleId], "Style is not allowed.");
-        require(stylePrice[_styleId] == msg.value, "Price is incorrect");
+        require(stylePrice[_styleId] >= msg.value, "Price is incorrect");
 
         tokenStyle[_tokenId] = _styleId;
         emit StyleChanged(_tokenId, _styleId);
