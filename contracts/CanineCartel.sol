@@ -6,6 +6,10 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
+/**
+- .... . ....... -.. --- --. ... ....... -- .- -.-- ....... .... .- ...- . ....... .... .- -.. ....... - .... . .. .-. ....... -.. .- -.-- --..-- ....... -... ..- - ....... ..- ... ....... -.-. .- - ... ....... .- .-. . ....... .... . .-. . ....... - --- ....... ... - .- -.-- ....... -....- ....... - .... . ....... .-. . ... .. ... - .- -. -.-. .
+*/
+
 contract CanineCartel is Ownable, ERC721 {
     using SafeMath for uint256;
     using Strings for uint256;
@@ -16,7 +20,7 @@ contract CanineCartel is Ownable, ERC721 {
     uint256 public supplyLimit;
     bool public saleActive = false;
 
-    uint256 namingPrice = 0.01 ether;
+    uint256 namingPrice = 0 ether;
 
     address public wallet1Address;
     address public wallet2Address;
